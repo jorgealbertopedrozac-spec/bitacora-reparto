@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compartir QR - Bitácora de Entregas</title>
+  <style>
+    :root { --primary:#2c3e50; --accent:#8e44ad; --green:#27ae60; --blue:#3498db; --bg:#f4f7f6; --danger:#c0392b; }
+    * { box-sizing:border-box; }
+    body { font-family:'Segoe UI', sans-serif; background:var(--bg); margin:0; padding:20px; color:var(--primary); }
+    .container { max-width:780px; margin:0 auto; }
+    .topnav,.actions { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+    .hero,.card { background:white; border-radius:20px; padding:22px; box-shadow:0 8px 25px rgba(0,0,0,.08); margin-bottom:16px; }
+    .hero { border-top:8px solid var(--green); }
+    h1 { margin:0 0 6px; font-size:1.55rem; }
+    h2 { margin:0 0 12px; font-size:1.15rem; }
+    .muted { color:#7f8c8d; font-size:.92rem; margin:0; }
+    button,.btn { border:0; border-radius:14px; padding:13px 18px; font-weight:800; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; gap:8px; }
+    .primary { background:var(--accent); color:white; }
+    .secondary { background:#ecf0f1; color:var(--primary); }
+    .success { background:var(--green); color:white; }
+    .outline { background:white; color:var(--primary); border:1px solid #d9dee3; }
+    .qr-card { text-align:center; }
+    #qrcode { display:inline-flex; align-items:center; justify-content:center; padding:18px; border:1px solid #edf1f3; border-radius:24px; background:white; margin:10px auto 14px; }
+    #qrcode canvas, #qrcode img { width:280px !important; height:280px !important; max-width:76vw; max-height:76vw; }
+    .url-box { display:block; width:100%; padding:14px; border-radius:14px; background:#f8fafb; border:1px solid #edf1f3; word-break:break-all; text-align:left; font-weight:700; margin:12px 0; color:#34495e; }
+    .big-share { width:100%; min-height:66px; font-size:1.2rem; border-radius:18px; }
+    .status { display:none; margin-top:12px; padding:12px; border-radius:12px; font-weight:700; }
+    .ok { display:block; background:#eafaf1; color:#1e8449; }
+    .err { display:block; background:#fdecea; color:#c0392b; }
+    @media(max-width:700px){ body{ padding:12px; } .hero,.card{ padding:18px; } }
+    @media print {
+      body { background:white; padding:0; }
+      .no-print { display:none !important; }
+      .container { max-width:none; }
+      .hero,.card { box-shadow:none; border-radius:0; margin:0; }
+      #qrcode canvas, #qrcode img { width:360px !important; height:360px !important; max-width:none; max-height:none; }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="topnav no-print">
+      <a class="btn outline" href="index_bitacora.html">⬅ Nueva entrega</a>
+      <a class="btn secondary" href="reporte_entregas.html">📊 Reportes</a>
+    </div>
+
+    <section class="hero">
+      <h1>📱 Compartir Bitácora por QR</h1>
+      <p class="muted">Escanea este código para abrir directamente la captura de entregas.</p>
+    </section>
+
+    <section class="card qr-card">
+      <h2>Bitácora de Reparto</h2>
+      <div id="qrcode" aria-label="Código QR para abrir la bitácora"></div>
+      <div class="url-box" id="urlTexto">https://jorgealbertopedrozac-spec.github.io/bitacora-reparto/index_bitacora.html</div>
+      <div class="actions no-print">
+        <button type="button" class="success big-share" id="btnCompartir">📤 Compartir enlace</button>
+        <button type="button" class="primary" id="btnCopiar">📋 Copiar liga</button>
+        <a class="btn secondary" href="https://jorgealbertopedrozac-spec.github.io/bitacora-reparto/index_bitacora.html" target="_blank" rel="noopener">🔗 Abrir página</a>
+        <button type="button" class="secondary" id="btnImprimir">🖨️ Imprimir QR</button>
+      </div>
+      <div id="status" class="status"></div>
+    </section>
+  </div>
+
+  <script>
+    const URL_BITACORA = 'https://jorgealbertopedrozac-spec.github.io/bitacora-reparto/index_bitacora.html';
+    const statusBox = document.getElementById('status');
+
+    function setStatus(message, ok = true) {
+      statusBox.textContent = message;
+      statusBox.className = 'status ' + (ok ? 'ok' : 'err');
+      setTimeout(() => { statusBox.className = 'status'; }, 2200);
+    }
+
+    new QRCode(document.getElementById('qrcode'), {
+      text: URL_BITACORA,
+      width: 280,
+      height: 280,
+      correctLevel: QRCode.CorrectLevel.H
+    });
+
+    document.getElementById('btnCopiar').addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(URL_BITACORA);
+        setStatus('Liga copiada correctamente.');
+      } catch (e) {
+        setStatus('No se pudo copiar automáticamente. Mantén presionada la liga para copiarla.', false);
+      }
+    });
+
+    document.getElementById('btnCompartir').addEventListener('click', async () => {
+      try {
+        if (navigator.share) {
+          await navigator.share({ title:'Bitácora de Entregas', text:'Abrir captura de bitácora de entregas', url:URL_BITACORA });
+          return;
+        }
+        await navigator.clipboard.writeText(URL_BITACORA);
+        setStatus('Tu equipo no mostró el menú de compartir; copié la liga.');
+      } catch (e) {
+        if (e && e.name === 'AbortError') return;
+        setStatus('No se pudo compartir. Puedes copiar la liga manualmente.', false);
+      }
+    });
+
+    document.getElementById('btnImprimir').addEventListener('click', () => window.print());
+  </script>
+</body>
+</html>
