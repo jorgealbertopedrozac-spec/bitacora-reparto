@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reportes Bitácora de Entregas</title>
+  <style>
+    :root { --primary:#2c3e50; --accent:#8e44ad; --green:#27ae60; --blue:#3498db; --bg:#f4f7f6; --danger:#c0392b; }
+    * { box-sizing:border-box; }
+    body { font-family:'Segoe UI', sans-serif; background:var(--bg); margin:0; padding:20px; color:var(--primary); }
+    .container { max-width:1180px; margin:0 auto; }
+    .hero,.card { background:white; border-radius:18px; padding:18px; box-shadow:0 4px 15px rgba(0,0,0,.06); margin-bottom:16px; }
+    .hero { border-top:8px solid var(--blue); }
+    h1 { margin:0 0 6px; font-size:1.55rem; }
+    .muted { color:#7f8c8d; margin:0; font-size:.9rem; }
+    .filters { display:grid; grid-template-columns:repeat(5, minmax(130px, 1fr)); gap:10px; align-items:end; }
+    @media(max-width:900px){ .filters{ grid-template-columns:1fr 1fr; } }
+    @media(max-width:600px){ .filters{ grid-template-columns:1fr; } body{ padding:12px; } }
+    label { font-weight:700; display:block; margin-bottom:6px; font-size:.85rem; }
+    input, select { width:100%; padding:10px; border:1px solid #d9dee3; border-radius:10px; font-size:.96rem; background:white; }
+    button,.btn { border:0; border-radius:12px; padding:11px 14px; font-weight:800; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; gap:8px; }
+    .primary { background:var(--blue); color:white; }
+    .secondary { background:#ecf0f1; color:var(--primary); }
+    .success { background:var(--green); color:white; }
+    .outline { background:white; color:var(--primary); border:1px solid #d9dee3; }
+    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+    .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:14px; }
+    @media(max-width:700px){ .kpis{ grid-template-columns:1fr 1fr; } }
+    .kpi { background:#f8fafb; border:1px solid #edf1f3; border-radius:14px; padding:12px; }
+    .kpi b { display:block; font-size:1.4rem; margin-top:4px; }
+    .table-wrap { overflow:auto; background:white; border-radius:14px; border:1px solid #edf1f3; }
+    table { width:100%; border-collapse:collapse; min-width:980px; }
+    th,td { padding:10px; border-bottom:1px solid #edf1f3; text-align:left; vertical-align:top; font-size:.9rem; }
+    th { background:#f8fafb; position:sticky; top:0; z-index:1; }
+    .firma { width:150px; max-height:70px; object-fit:contain; border:1px solid #ecf0f1; background:white; border-radius:8px; }
+    .status { display:none; margin-top:12px; padding:12px; border-radius:12px; font-weight:700; }
+    .ok { display:block; background:#eafaf1; color:#1e8449; }
+    .err { display:block; background:#fdecea; color:#c0392b; }
+    .empty { padding:20px; text-align:center; color:#7f8c8d; }
+    @media print {
+      body { background:white; padding:0; }
+      .no-print { display:none !important; }
+      .container { max-width:none; }
+      .hero,.card { box-shadow:none; border-radius:0; margin:0; padding:10px; }
+      th { position:static; }
+      table { min-width:0; font-size:10px; }
+      th,td { padding:5px; font-size:10px; }
+      .firma { width:120px; max-height:55px; }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="actions no-print" style="margin-bottom:14px;">
+      <a class="btn outline" href="index_bitacora.html">⬅ Nueva entrega</a>
+      <a class="btn outline" href="index.html">Inicio evaluaciones</a>
+    </div>
+
+    <section class="hero">
+      <h1>📊 Reporte de Entregas</h1>
+      <p class="muted" id="subtitulo">Consulta semanal, mensual o por rango personalizado con firmas digitales.</p>
+    </section>
+
+    <section class="card no-print">
+      <div class="filters">
+        <div>
+          <label for="periodo">Periodo</label>
+          <select id="periodo">
+            <option value="semana">Semana actual</option>
+            <option value="mes">Mes actual</option>
+            <option value="personalizado">Personalizado</option>
+          </select>
+        </div>
+        <div>
+          <label for="desde">Desde</label>
+          <input id="desde" type="date" />
+        </div>
+        <div>
+          <label for="hasta">Hasta</label>
+          <input id="hasta" type="date" />
+        </div>
+        <div>
+          <label for="destinoFiltro">Destino contiene</label>
+          <input id="destinoFiltro" placeholder="Opcional" />
+        </div>
+        <div>
+          <label for="docFiltro">Documento(s) contiene</label>
+          <input id="docFiltro" placeholder="Opcional" />
+        </div>
+      </div>
+      <div class="actions">
+        <button class="primary" id="btnBuscar">🔎 Buscar</button>
+        <button class="success" id="btnImprimir">🖨️ Imprimir / PDF</button>
+        <button class="secondary" id="btnCSV">⬇️ Exportar CSV</button>
+      </div>
+      <div id="status" class="status"></div>
+    </section>
+
+    <section class="card">
+      <div class="kpis">
+        <div class="kpi">Registros<b id="kpiRegistros">0</b></div>
+        <div class="kpi">Bultos<b id="kpiBultos">0</b></div>
+        <div class="kpi">Destinos<b id="kpiDestinos">0</b></div>
+        <div class="kpi">Con firma<b id="kpiFirmas">0</b></div>
+      </div>
+      <div class="table-wrap" id="tablaWrap"></div>
+    </section>
+  </div>
+
+  <script>
+    let registros = [];
+
+    function isoDate(d) {
+      const x = new Date(d);
+      x.setMinutes(x.getMinutes() - x.getTimezoneOffset());
+      return x.toISOString().slice(0,10);
+    }
+    function startOfWeek(d) {
+      const x = new Date(d);
+      const day = x.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      x.setDate(x.getDate() + diff);
+      x.setHours(0,0,0,0);
+      return x;
+    }
+    function endOfDay(d) {
+      const x = new Date(d);
+      x.setHours(23,59,59,999);
+      return x;
+    }
+    function setRangeByPeriodo() {
+      const p = document.getElementById('periodo').value;
+      const now = new Date();
+      let desde = new Date(now), hasta = new Date(now);
+      if (p === 'semana') {
+        desde = startOfWeek(now);
+        hasta = new Date(desde); hasta.setDate(hasta.getDate() + 6);
+      } else if (p === 'mes') {
+        desde = new Date(now.getFullYear(), now.getMonth(), 1);
+        hasta = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      } else {
+        return;
+      }
+      document.getElementById('desde').value = isoDate(desde);
+      document.getElementById('hasta').value = isoDate(hasta);
+    }
+    function fmtDate(value) {
+      if (!value) return '';
+      return new Date(value).toLocaleString('es-MX', { dateStyle:'short', timeStyle:'short' });
+    }
+    function safe(value) {
+      return String(value ?? '').replace(/[&<>"]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[s]));
+    }
+    function setStatus(msg, type) {
+      const box = document.getElementById('status');
+      box.textContent = msg;
+      box.className = 'status ' + (type === 'ok' ? 'ok' : 'err');
+    }
+    function clearStatus(){ document.getElementById('status').className = 'status'; }
+
+    async function buscar() {
+      if (!window._supabase) {
+        setStatus('No se encontró la conexión de Supabase. Revisa supabase-config.js.', 'err');
+        return;
+      }
+      clearStatus();
+      const desde = document.getElementById('desde').value;
+      const hasta = document.getElementById('hasta').value;
+      if (!desde || !hasta) {
+        setStatus('Selecciona fecha inicial y final.', 'err');
+        return;
+      }
+      const desdeIso = new Date(desde + 'T00:00:00').toISOString();
+      const hastaIso = endOfDay(hasta + 'T00:00:00').toISOString();
+      let q = _supabase.from('bitacora_entregas')
+        .select('*')
+        .gte('fecha', desdeIso)
+        .lte('fecha', hastaIso)
+        .order('fecha', { ascending:false })
+        .limit(1000);
+
+      const destino = document.getElementById('destinoFiltro').value.trim();
+      const doc = document.getElementById('docFiltro').value.trim();
+      if (destino) q = q.ilike('destino', `%${destino}%`);
+      if (doc) q = q.ilike('documento_numero', `%${doc}%`);
+
+      const { data, error } = await q;
+      if (error) {
+        console.error(error);
+        setStatus('No se pudo consultar: ' + error.message, 'err');
+        return;
+      }
+      registros = data || [];
+      render();
+    }
+
+    function render() {
+      const destinos = new Set(registros.map(r => (r.destino || '').trim().toLowerCase()).filter(Boolean));
+      document.getElementById('kpiRegistros').textContent = registros.length;
+      document.getElementById('kpiBultos').textContent = registros.reduce((s,r) => s + Number(r.bultos || 0), 0);
+      document.getElementById('kpiDestinos').textContent = destinos.size;
+      document.getElementById('kpiFirmas').textContent = registros.filter(r => !!r.firma_data_url).length;
+      const desde = document.getElementById('desde').value;
+      const hasta = document.getElementById('hasta').value;
+      document.getElementById('subtitulo').textContent = `Periodo: ${desde} al ${hasta}`;
+
+      if (!registros.length) {
+        document.getElementById('tablaWrap').innerHTML = '<div class="empty">Sin registros en el periodo seleccionado.</div>';
+        return;
+      }
+      const rows = registros.map(r => `
+        <tr>
+          <td>${safe(fmtDate(r.fecha))}</td>
+          <td>${safe(r.destino)}</td>
+          <td>${safe(r.bultos)}</td>
+          <td><strong>${safe(r.documento_numero)}</strong></td>
+          <td>${safe(r.quien_entrega)}</td>
+          <td>${safe(r.quien_recibe)}</td>
+          <td>${safe(r.operador_dispositivo || '')}</td>
+          <td>${safe(r.observaciones || '')}</td>
+          <td>${r.firma_data_url ? `<img class="firma" src="${r.firma_data_url}" alt="Firma">` : ''}</td>
+        </tr>`).join('');
+      document.getElementById('tablaWrap').innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th><th>Destino</th><th>Bultos</th><th>Documento(s)</th><th>Entrega</th><th>Recibe</th><th>Unidad/Ref.</th><th>Observaciones</th><th>Firma</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    function exportCSV() {
+      if (!registros.length) { setStatus('No hay registros para exportar.', 'err'); return; }
+      const headers = ['Fecha','Destino','Bultos','No documento(s)','Quien entrega','Quien recibe','Unidad/Ref','Observaciones','Tiene firma'];
+      const lines = [headers].concat(registros.map(r => [
+        fmtDate(r.fecha), r.destino, r.bultos, r.documento_numero, r.quien_entrega, r.quien_recibe, r.operador_dispositivo || '', r.observaciones || '', r.firma_data_url ? 'SI' : 'NO'
+      ]));
+      const csv = lines.map(row => row.map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(',')).join('\n');
+      const blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bitacora_entregas_${document.getElementById('desde').value}_${document.getElementById('hasta').value}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('periodo').addEventListener('change', setRangeByPeriodo);
+    document.getElementById('btnBuscar').addEventListener('click', buscar);
+    document.getElementById('btnImprimir').addEventListener('click', () => window.print());
+    document.getElementById('btnCSV').addEventListener('click', exportCSV);
+    setRangeByPeriodo();
+    buscar();
+  </script>
+</body>
+</html>

@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bitácora de Entregas</title>
+  <style>
+    :root { --primary:#2c3e50; --accent:#8e44ad; --green:#27ae60; --blue:#3498db; --bg:#f4f7f6; --danger:#c0392b; }
+    * { box-sizing:border-box; }
+    body { font-family:'Segoe UI', sans-serif; background:var(--bg); margin:0; padding:20px; color:var(--primary); }
+    .container { max-width:780px; margin:0 auto; }
+    .hero { background:white; padding:22px; border-radius:20px; box-shadow:0 8px 25px rgba(0,0,0,.08); margin-bottom:16px; border-top:8px solid var(--accent); }
+    h1 { margin:0 0 6px; font-size:1.55rem; }
+    .muted { color:#7f8c8d; font-size:.9rem; margin:0; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    @media(max-width:700px){ .grid{ grid-template-columns:1fr; } body{ padding:12px; } }
+    .card { background:white; border-radius:18px; padding:18px; box-shadow:0 4px 15px rgba(0,0,0,.06); margin-bottom:16px; }
+    label { font-weight:700; display:block; margin-bottom:6px; font-size:.9rem; }
+    input, select, textarea { width:100%; padding:12px; border:1px solid #d9dee3; border-radius:10px; font-size:1rem; background:white; }
+    textarea { min-height:86px; resize:vertical; }
+    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+    button, .btn { border:0; border-radius:12px; padding:13px 18px; font-weight:800; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; gap:8px; }
+    .primary { background:var(--accent); color:white; }
+    .secondary { background:#ecf0f1; color:var(--primary); }
+    .success { background:var(--green); color:white; }
+    .outline { background:white; color:var(--primary); border:1px solid #d9dee3; }
+    .danger { background:#fdecea; color:var(--danger); }
+    .sig-wrap { border:2px dashed #bdc3c7; background:#fff; border-radius:14px; padding:10px; touch-action:none; }
+    #signatureCanvas { width:100%; height:210px; display:block; background:#fff; border-radius:10px; border:1px solid #ecf0f1; touch-action:none; }
+    .status { display:none; margin-top:12px; padding:12px; border-radius:12px; font-weight:700; }
+    .ok { display:block; background:#eafaf1; color:#1e8449; }
+    .err { display:block; background:#fdecea; color:#c0392b; }
+    .topnav { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+    .small { font-size:.82rem; color:#7f8c8d; }
+    .readonly-field { background:#f8fafb; color:#566573; cursor:not-allowed; }
+    #bultos { font-size:1.45rem; text-align:center; font-weight:800; letter-spacing:1px; cursor:pointer; }
+    .modal-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.55); display:none; align-items:center; justify-content:center; padding:18px; z-index:999; }
+    .modal-backdrop.visible { display:flex; }
+    .modal-card { width:min(420px, 100%); background:white; border-radius:24px; padding:18px; box-shadow:0 24px 70px rgba(0,0,0,.28); }
+    .modal-title { margin:0 0 6px; font-size:1.25rem; }
+    .bultos-display { width:100%; min-height:64px; margin:14px 0; border:2px solid #d9dee3; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:2.2rem; font-weight:900; letter-spacing:2px; background:#f8fafb; color:var(--primary); }
+    .num-pad { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; }
+    .num-key { min-height:68px; font-size:1.65rem; border-radius:18px; background:#f8fafb; border:1px solid #d9dee3; color:var(--primary); }
+    .num-key.danger { background:#fdecea; color:var(--danger); }
+    .modal-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+    .modal-actions button { min-height:54px; font-size:1.05rem; }
+    .doc-row { display:flex; gap:8px; align-items:center; }
+    .doc-row input { flex:1; }
+    .doc-list { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+    .doc-pill { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; background:#f8fafb; border:1px solid #edf1f3; border-radius:12px; font-weight:700; word-break:break-word; }
+    .doc-pill button { padding:7px 10px; border-radius:10px; flex-shrink:0; }
+    .doc-help { margin-top:7px; }
+    .step-section { display:none; }
+    .step-section.active { display:block; }
+    .big-sign-btn { width:100%; min-height:74px; font-size:1.35rem; border-radius:20px; margin-top:18px; box-shadow:0 10px 24px rgba(142,68,173,.22); }
+    .step-title { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+    .step-title h2 { margin:0; font-size:1.18rem; }
+    .firma-screen { border-top:8px solid var(--green); }
+    .save-big { width:100%; min-height:78px; font-size:1.35rem; border-radius:20px; box-shadow:0 10px 24px rgba(142,68,173,.22); }
+    .firma-screen .actions.final-actions { display:grid; grid-template-columns:1fr; gap:12px; }
+    .firma-screen .secondary-row { display:flex; gap:10px; flex-wrap:wrap; }
+
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div class="topnav">
+      <a class="btn outline" href="index.html">⬅ Inicio evaluaciones</a>
+      <a class="btn secondary" href="reporte_entregas.html">📊 Reportes</a>
+    </div>
+
+    <section class="hero">
+      <h1>🚚 Bitácora de Entregas</h1>
+      <p class="muted">Registro digital de material entregado de reparto a almacén, con firma de recibido.</p>
+    </section>
+
+    <form id="formEntrega" class="card">
+      <div id="pantallaDatos" class="step-section active" aria-hidden="false">
+      <div class="grid">
+        <div>
+          <label for="destino">Destino / Bodega</label>
+          <input id="destino" name="destino" autocomplete="off" required placeholder="Ej. Bodega Centro, Cliente, Almacén..." />
+        </div>
+        <div>
+          <label for="fechaVista">Fecha y hora</label>
+          <input id="fechaVista" class="readonly-field" type="text" readonly aria-readonly="true" />
+          <p class="small">La fecha se toma automáticamente del servidor al guardar y no se captura manualmente.</p>
+        </div>
+        <div>
+          <label for="bultos">Bultos</label>
+          <input id="bultos" name="bultos" type="text" inputmode="none" readonly required placeholder="0" value="0" autocomplete="off" aria-label="Toca para capturar bultos" />
+          <p class="small">Toca la casilla para abrir el teclado rápido.</p>
+        </div>
+        <div>
+          <label for="documento_numero">No. de transferencia o factura</label>
+          <div class="doc-row">
+            <input id="documento_numero" name="documento_numero" autocomplete="off" placeholder="Ej. TR-12345 o F-98765" />
+            <button type="button" class="secondary" id="btnAgregarDoc">➕ Agregar</button>
+          </div>
+          <p class="small doc-help">Puedes registrar una o varias transferencias/facturas en la misma entrega.</p>
+          <div id="documentosLista" class="doc-list" aria-label="Documentos agregados"></div>
+        </div>
+        <div>
+          <label for="quien_entrega">Quién entrega</label>
+          <input id="quien_entrega" name="quien_entrega" autocomplete="name" required placeholder="Nombre del operador" />
+        </div>
+        <div>
+          <label for="quien_recibe">Quién recibe</label>
+          <input id="quien_recibe" name="quien_recibe" autocomplete="name" required placeholder="Nombre de quien recibe" />
+        </div>
+        <div>
+          <label for="operador_dispositivo">Unidad</label>
+          <input id="operador_dispositivo" name="operador_dispositivo" autocomplete="off" placeholder="Opcional" />
+        </div>
+      </div>
+
+      <button type="button" class="primary big-sign-btn" id="btnPedirFirma">✍️ Pedir firma</button>
+      </div>
+
+      <div id="pantallaFirma" class="step-section firma-screen" aria-hidden="true" style="margin-top:0;">
+        <div class="step-title">
+          <h2>Firma y observaciones</h2>
+          <button type="button" class="secondary" id="btnRegresarDatos">⬅ Regresar</button>
+        </div>
+
+        <div style="margin-top:14px;">
+          <label>Firma de quien recibe</label>
+          <div class="sig-wrap">
+            <canvas id="signatureCanvas"></canvas>
+          </div>
+          <p class="small">Pide la firma dentro del recuadro. La firma quedará guardada junto con el registro.</p>
+          <div class="actions">
+            <button type="button" class="secondary" id="btnLimpiarFirma">🧽 Limpiar firma</button>
+          </div>
+        </div>
+
+        <div style="margin-top:18px;">
+          <label for="observaciones">Observaciones</label>
+          <textarea id="observaciones" name="observaciones" placeholder="Daños, faltantes, comentarios, etc." autocomplete="off"></textarea>
+        </div>
+
+        <div class="actions final-actions">
+          <button type="submit" class="primary save-big" id="btnGuardar">💾 Guardar entrega</button>
+          <div class="secondary-row">
+            <button type="button" class="secondary" id="btnNuevo">➕ Nuevo registro</button>
+            <a class="btn success" href="reporte_entregas.html">Ver reportes</a>
+          </div>
+        </div>
+      </div>
+      <div id="status" class="status"></div>
+    </form>
+  </div>
+
+  <div id="bultosModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="bultosModalTitle">
+      <h2 id="bultosModalTitle" class="modal-title">Capturar bultos</h2>
+      <p class="muted">Marca la cantidad y presiona OK para continuar.</p>
+      <div id="bultosModalDisplay" class="bultos-display">0</div>
+      <div class="num-pad" aria-label="Teclado rápido para bultos">
+        <button type="button" class="num-key" data-num="1">1</button>
+        <button type="button" class="num-key" data-num="2">2</button>
+        <button type="button" class="num-key" data-num="3">3</button>
+        <button type="button" class="num-key" data-num="4">4</button>
+        <button type="button" class="num-key" data-num="5">5</button>
+        <button type="button" class="num-key" data-num="6">6</button>
+        <button type="button" class="num-key" data-num="7">7</button>
+        <button type="button" class="num-key" data-num="8">8</button>
+        <button type="button" class="num-key" data-num="9">9</button>
+        <button type="button" class="num-key danger" id="btnBultosLimpiar">C</button>
+        <button type="button" class="num-key" data-num="0">0</button>
+        <button type="button" class="num-key" id="btnBultosBorrar">⌫</button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="secondary" id="btnBultosCancelar">Cancelar</button>
+        <button type="button" class="success" id="btnBultosOk">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('formEntrega');
+    const canvas = document.getElementById('signatureCanvas');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+    let hasSignature = false;
+    let documentos = [];
+
+    function renderDocumentos() {
+      const lista = document.getElementById('documentosLista');
+      if (!documentos.length) {
+        lista.innerHTML = '';
+        return;
+      }
+      lista.innerHTML = documentos.map((doc, i) => `
+        <div class="doc-pill">
+          <span>${i + 1}. ${escapeHtml(doc)}</span>
+          <button type="button" class="danger" data-doc-index="${i}">Quitar</button>
+        </div>`).join('');
+      lista.querySelectorAll('[data-doc-index]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          documentos.splice(Number(btn.dataset.docIndex), 1);
+          renderDocumentos();
+        });
+      });
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>\"]/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[s]));
+    }
+
+    function agregarDocumento() {
+      const input = document.getElementById('documento_numero');
+      const valor = input.value.trim();
+      if (!valor) return;
+      const partes = valor.split(/[\n,;]+/).map(x => x.trim()).filter(Boolean);
+      partes.forEach(doc => {
+        if (!documentos.some(x => x.toLowerCase() === doc.toLowerCase())) documentos.push(doc);
+      });
+      input.value = '';
+      input.focus();
+      renderDocumentos();
+    }
+
+    function fechaVistaActual() {
+      return new Date().toLocaleString('es-MX', { dateStyle:'short', timeStyle:'short' });
+    }
+
+    function actualizarFechaVista() {
+      document.getElementById('fechaVista').value = fechaVistaActual();
+    }
+
+    let bultosTemporal = '0';
+
+    function normalizarBultos(value) {
+      const limpio = String(value || '').replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+      return limpio || '0';
+    }
+
+    function setBultos(value) {
+      document.getElementById('bultos').value = normalizarBultos(value);
+    }
+
+    function actualizarDisplayBultos() {
+      document.getElementById('bultosModalDisplay').textContent = bultosTemporal || '0';
+    }
+
+    function agregarNumeroBultos(num) {
+      bultosTemporal = normalizarBultos((bultosTemporal === '0' ? '' : bultosTemporal) + String(num));
+      actualizarDisplayBultos();
+    }
+
+    function borrarNumeroBultos() {
+      bultosTemporal = bultosTemporal.length > 1 ? bultosTemporal.slice(0, -1) : '0';
+      actualizarDisplayBultos();
+    }
+
+    function abrirModalBultos() {
+      bultosTemporal = normalizarBultos(document.getElementById('bultos').value || '0');
+      actualizarDisplayBultos();
+      const modal = document.getElementById('bultosModal');
+      modal.classList.add('visible');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function cerrarModalBultos() {
+      const modal = document.getElementById('bultosModal');
+      modal.classList.remove('visible');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    function confirmarBultos() {
+      setBultos(bultosTemporal);
+      cerrarModalBultos();
+    }
+
+    function resizeCanvas() {
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      const rect = canvas.getBoundingClientRect();
+      const old = canvas.toDataURL();
+      canvas.width = Math.floor(rect.width * ratio);
+      canvas.height = Math.floor(rect.height * ratio);
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.lineWidth = 2.4;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#1f2d3d';
+      if (hasSignature) {
+        const img = new Image();
+        img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
+        img.src = old;
+      } else {
+        clearSignature();
+      }
+    }
+
+    function clearSignature() {
+      const rect = canvas.getBoundingClientRect();
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, rect.width, rect.height);
+      hasSignature = false;
+    }
+
+    function pointerPos(evt) {
+      const rect = canvas.getBoundingClientRect();
+      const p = evt.touches ? evt.touches[0] : evt;
+      return { x: p.clientX - rect.left, y: p.clientY - rect.top };
+    }
+
+    function start(evt) {
+      evt.preventDefault();
+      drawing = true;
+      const p = pointerPos(evt);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    }
+
+    function move(evt) {
+      if (!drawing) return;
+      evt.preventDefault();
+      const p = pointerPos(evt);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      hasSignature = true;
+    }
+
+    function end(evt) {
+      if (!drawing) return;
+      evt.preventDefault();
+      drawing = false;
+    }
+
+    function setStatus(message, type) {
+      const box = document.getElementById('status');
+      box.textContent = message;
+      box.className = 'status ' + (type === 'ok' ? 'ok' : 'err');
+    }
+
+
+    function mostrarPantallaFirma() {
+      agregarDocumento();
+      if (!form.reportValidity()) return;
+      if (!documentos.length) {
+        setStatus('Agrega al menos una transferencia o factura.', 'err');
+        document.getElementById('documento_numero').focus();
+        return;
+      }
+      document.getElementById('pantallaDatos').classList.remove('active');
+      document.getElementById('pantallaDatos').setAttribute('aria-hidden', 'true');
+      document.getElementById('pantallaFirma').classList.add('active');
+      document.getElementById('pantallaFirma').setAttribute('aria-hidden', 'false');
+      document.getElementById('status').className = 'status';
+      setTimeout(() => {
+        resizeCanvas();
+        document.activeElement?.blur?.();
+        document.getElementById('pantallaFirma').scrollIntoView({ behavior:'smooth', block:'start' });
+      }, 50);
+    }
+
+    function regresarADatos() {
+      document.getElementById('pantallaFirma').classList.remove('active');
+      document.getElementById('pantallaFirma').setAttribute('aria-hidden', 'true');
+      document.getElementById('pantallaDatos').classList.add('active');
+      document.getElementById('pantallaDatos').setAttribute('aria-hidden', 'false');
+      document.activeElement?.blur?.();
+    }
+
+    function resetForm() {
+      form.reset();
+      actualizarFechaVista();
+      setBultos('0');
+      cerrarModalBultos();
+      regresarADatos();
+      clearSignature();
+      documentos = [];
+      renderDocumentos();
+      document.getElementById('status').className = 'status';
+    }
+
+    async function guardarEntrega(evt) {
+      evt.preventDefault();
+      if (!window._supabase) {
+        setStatus('No se encontró la conexión de Supabase. Revisa supabase-config.js.', 'err');
+        return;
+      }
+      agregarDocumento();
+      if (!documentos.length) {
+        setStatus('Agrega al menos una transferencia o factura.', 'err');
+        return;
+      }
+      if (!hasSignature) {
+        setStatus('Falta la firma de recibido.', 'err');
+        return;
+      }
+      const btn = document.getElementById('btnGuardar');
+      btn.disabled = true;
+      btn.textContent = 'Guardando...';
+      try {
+        const payload = {
+          destino: document.getElementById('destino').value.trim(),
+          bultos: Number(String(document.getElementById('bultos').value || '0').replace(/\D/g, '') || 0),
+          documento_numero: documentos.join(', '),
+          quien_entrega: document.getElementById('quien_entrega').value.trim(),
+          quien_recibe: document.getElementById('quien_recibe').value.trim(),
+          operador_dispositivo: document.getElementById('operador_dispositivo').value.trim() || null,
+          observaciones: document.getElementById('observaciones').value.trim() || null,
+          firma_data_url: canvas.toDataURL('image/png')
+        };
+        const { error } = await _supabase.from('bitacora_entregas').insert([payload]);
+        if (error) throw error;
+        setStatus('Entrega guardada correctamente.', 'ok');
+        cerrarModalBultos();
+        setTimeout(resetForm, 900);
+      } catch (e) {
+        console.error(e);
+        setStatus('No se pudo guardar: ' + (e.message || e), 'err');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '💾 Guardar entrega';
+      }
+    }
+
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    canvas.addEventListener('touchstart', start, { passive:false });
+    canvas.addEventListener('touchmove', move, { passive:false });
+    canvas.addEventListener('touchend', end, { passive:false });
+    document.getElementById('btnLimpiarFirma').addEventListener('click', clearSignature);
+    document.getElementById('btnPedirFirma').addEventListener('click', mostrarPantallaFirma);
+    document.getElementById('btnRegresarDatos').addEventListener('click', regresarADatos);
+    document.getElementById('btnNuevo').addEventListener('click', resetForm);
+    document.getElementById('btnAgregarDoc').addEventListener('click', agregarDocumento);
+    document.getElementById('documento_numero').addEventListener('keydown', evt => {
+      if (evt.key === 'Enter') { evt.preventDefault(); agregarDocumento(); }
+    });
+    const bultosInput = document.getElementById('bultos');
+    const bultosModal = document.getElementById('bultosModal');
+    bultosInput.addEventListener('click', abrirModalBultos);
+    bultosInput.addEventListener('touchstart', evt => { evt.preventDefault(); abrirModalBultos(); }, { passive:false });
+    bultosModal.addEventListener('click', evt => {
+      if (evt.target === bultosModal) cerrarModalBultos();
+    });
+    document.querySelectorAll('[data-num]').forEach(btn => btn.addEventListener('click', () => agregarNumeroBultos(btn.dataset.num)));
+    document.getElementById('btnBultosLimpiar').addEventListener('click', () => { bultosTemporal = '0'; actualizarDisplayBultos(); });
+    document.getElementById('btnBultosBorrar').addEventListener('click', borrarNumeroBultos);
+    document.getElementById('btnBultosCancelar').addEventListener('click', cerrarModalBultos);
+    document.getElementById('btnBultosOk').addEventListener('click', confirmarBultos);
+    document.addEventListener('keydown', evt => {
+      if (!bultosModal.classList.contains('visible')) return;
+      if (/^[0-9]$/.test(evt.key)) agregarNumeroBultos(evt.key);
+      if (evt.key === 'Backspace') borrarNumeroBultos();
+      if (evt.key === 'Enter') confirmarBultos();
+      if (evt.key === 'Escape') cerrarModalBultos();
+    });
+    form.addEventListener('submit', guardarEntrega);
+    window.addEventListener('resize', resizeCanvas);
+
+    actualizarFechaVista();
+    setInterval(actualizarFechaVista, 30000);
+    setBultos('0');
+    renderDocumentos();
+    setTimeout(resizeCanvas, 50);
+  </script>
+</body>
+</html>
